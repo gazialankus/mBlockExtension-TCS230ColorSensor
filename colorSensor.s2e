@@ -1,0 +1,60 @@
+{
+	"extensionName": "TCS230",
+	"description": "TCS230 Color Sensor",
+	"version": "1.0",
+	"author": "Gazihan ALANKUŞ (gazialankus@gmail.com)",
+	"homepage": "www.ieu.edu.tr",
+	"sort": 0,
+	"javascriptURL": "js/colorSensor.js",
+	"firmware": "1.0",
+	"extensionPort": 0,
+	"blockSpecs": [
+		[
+			"w",
+			"initialize TCS230 with S0:%n S1:%n S2:%n S3:%n OUT:%n Frequency Scaling:%d.freqScaling",
+			"initializeTCS230",
+			"2",
+			"3",
+			"4",
+			"5",
+			"10",
+			"100%",
+			{
+				"encode":"{d0}{d1}{d2}{d3}{d4}{d5}",
+				"inc": "",
+				"def": "--separator--const int TCS230_S0 = {0};\n\nconst int TCS230_S1 = {1};\nconst int TCS230_S2 = {2};\nconst int TCS230_S3 = {3};\nconst int TCS230_OUT = {4};\n",
+				"setup": "",
+				"work": "pinMode(TCS230_S0, OUTPUT);\npinMode(TCS230_S1, OUTPUT);\npinMode(TCS230_S2, OUTPUT);\npinMode(TCS230_S3, OUTPUT);\npinMode(TCS230_OUT, INPUT);\ndigitalWrite(TCS230_S0, ({5} == 0 || {5} == 2) ? LOW : HIGH);\ndigitalWrite(TCS230_S1, ({5} == 0 || {5} == 20) ? LOW : HIGH);\n",
+				"loop": ""
+			}
+		],
+		[
+			"r",
+			"read color with filter %d.colorFilter",
+			"readColorWithFilter", 
+			"RED", 
+			{
+				"encode":"{d0}",
+				"inc": "",
+				"def": "--separator--unsigned long readPulseTCS230(int s2, int s3) {\ndigitalWrite(TCS230_S2,s2);\ndigitalWrite(TCS230_S3,s3);\nreturn pulseIn(TCS230_OUT, digitalRead(TCS230_OUT) == HIGH ? LOW : HIGH);\n}\nunsigned long readRedTCS230() {\nreturn readPulseTCS230(LOW, LOW);\n}\nunsigned long readGreenTCS230() {\nreturn readPulseTCS230(HIGH, HIGH);\n}\nunsigned long readBlueTCS230() {\nreturn readPulseTCS230(LOW, HIGH);\n}\nunsigned long readClearTCS230() {\nreturn readPulseTCS230(HIGH, LOW);\n}\nunsigned long readColorWithFilter(int filter) {\nreturn filter == 1 ? readRedTCS230() : (filter == 2 ? readGreenTCS230() : (filter == 3) ? readBlueTCS230() : readClearTCS230());\n}\n",
+				"setup": "",
+				"work": "readColorWithFilter({0})", 
+				"loop": ""
+			}
+		]
+	],
+	"menus": {
+		"freqScaling": ["POWEROFF", "2%", "20%", "100%"], 
+		"colorFilter": ["RED", "GREEN", "BLUE", "CLEAR"] 
+	}, 
+	"values": {
+		"POWEROFF": 0, 
+		"2%": 2, 
+		"20%": 20, 
+		"100%": 100, 
+		"RED": 1, 
+		"GREEN": 2, 
+		"BLUE": 3, 
+		"CLEAR": 0
+	}
+}
