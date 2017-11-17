@@ -13,26 +13,59 @@
         "2%": 2, 
         "20%": 20, 
         "100%": 100 
-    }
-    
+    };
+
+    var colorFilters = {
+        "RED": 1, 
+        "GREEN": 2, 
+        "BLUE": 3, 
+        "CLEAR": 0
+    };
+
+    var pins;
+
 	ext.resetAll = function(){};
 	
 	ext.runArduino = function(){
 		
 	};
-	ext.initializeTCS230 = function(s0, s1, s2, s3, s4, out, freqScalingString) {
+	ext.initializeTCS230 = function(s0, s1, s2, s3, out, freqScalingString) {
+        pins = [s0, s1, s2, s3, out];
         var freqScaling = valueOrIndex(freqScalingString, freqScales);
-        runPackage(30,freqScaling+11,0);
-        // runPackage(30,s0,(freqScaling == 0 || freqScaling == 2) ? 0 : 1);
-        // runPackage(30,s1,(freqScaling == 0 || freqScaling == 20) ? 0 : 1);
+        digitalWrite(s0, (freqScaling == 0 || freqScaling == 2) ? 0 : 1);
+        digitalWrite(s1, (freqScaling == 0 || freqScaling == 20) ? 0 : 1);
     };
-    ext.readColorWithFilter = function(nextId, colorFilter) { //10 + colorFilter
-        runPackage(30,colorFilter+10,0);
+    ext.readColorWithFilter = function(nextId, colorFilterString) { 
+        var filter = valueOrIndex(colorFilterString, colorFilters);
+        filter == 1 ? prepareToReadRedTCS230() : (filter == 2 ? prepareToReadGreenTCS230() : (filter == 3) ? prepareToReadBlueTCS230() : prepareToReadClearTCS230());
+
+        getPulse(nextID, pins[4]);
     };
 	var _level = 0;
 	ext.blink = function(){
 		device.send([0x22, 0x23])
 	}
+
+    function prepareTCS230(s2Value, s3Value) {
+        digitalWrite(pins[2], s2Value);
+        digitalWrite(pins[3], s3Value);
+    }
+
+    function prepareToReadRedTCS230() {
+        prepareTCS230(0, 0);
+    } 
+
+    function prepareToReadGreenTCS230() {
+        prepareTCS230(1, 1);
+    } 
+
+    function prepareToReadBlueTCS230() {
+        prepareTCS230(0, 1);
+    } 
+
+    function prepareToReadClearTCS230() {
+        prepareTCS230(1, 0);
+    }
 
     function valueOrIndex(beat, beats) {
         return typeof beat=="number"?beat:beats[beat];
@@ -52,6 +85,17 @@
         device.send(bytes);
     }
     
+    function digitalWrite(pin, value) {
+        runPackage(30, pin, value);
+    }
+    function digitalRead(nextID, pin) {
+        getPackage(nextID, 30, pin);
+    }
+
+    function getPulse(nextID, pin) {
+        getPackage(nextID, 37, pin, short2array(20000));
+    }
+
     function runPackage(){
         sendPackage(arguments, 2);
     }
