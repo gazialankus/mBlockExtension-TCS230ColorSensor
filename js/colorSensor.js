@@ -30,26 +30,73 @@
 	ext.runArduino = function(){
         responseValue();
 	};
+
 	ext.initializeTCS230 = function(s0, s1, s2, s3, out, freqScalingString) {
-        trace([99]);
         pins = [s0, s1, s2, s3, out];
+
         var freqScaling = valueOrIndex(freqScalingString, freqScales);
         digitalWrite(s0, (freqScaling == 0 || freqScaling == 2) ? 0 : 1);
         digitalWrite(s1, (freqScaling == 0 || freqScaling == 20) ? 0 : 1);
     };
-    ext.readColorWithFilter = function(nextId, colorFilterString) { 
-        var deviceId = 30;
-        getPackage(nextID,deviceId,5);
+    // pins are verified to be conserved
+    ext.setColorFilter = function(colorFilterString) { 
+        var filter = valueOrIndex(colorFilterString, colorFilters);
 
-        // var filter = valueOrIndex(colorFilterString, colorFilters);
-        // filter == 1 ? prepareToReadRedTCS230() : (filter == 2 ? prepareToReadGreenTCS230() : (filter == 3) ? prepareToReadBlueTCS230() : prepareToReadClearTCS230());
-
-        // getPulse(nextID, pins[4]);
+        switch(filter) {
+            case 1: 
+                prepareToReadRedTCS230();
+                break;
+            case 2: 
+                prepareToReadGreenTCS230();
+                break;
+            case 3: 
+                prepareToReadBlueTCS230();
+                break;
+            default:
+                prepareToReadClearTCS230();
+                break;
+        }
     };
+
+    ext.readColorWithCurrentFilter = function(nextID) { 
+        getPulse(nextID, pins[4]);
+    };
+
 	var _level = 0;
 	ext.blink = function(){
 		device.send([0x22, 0x23])
 	}
+
+    function outputInDigitalPins(val) {
+        if(typeof val != "number") {
+            digitalWrite(13, 0);
+        } else {
+            digitalWrite(13, 1);
+
+            var bin = val.toString(2);
+
+            for(var i = 2; i < 13; ++i) {
+                digitalWrite(i, 0);
+            }
+            var outMaxPin = 12;
+            var outMinPin = 2;
+            var outLength = outMaxPin - outMinPin + 1;
+
+            if (bin.length > outLength) {
+                digitalWrite(13, 0);
+            } else {
+                var bi = 0;
+                for (var i = bin.length - 1; i >= 0; --i) {
+                    if(bin[i] == 1) {
+                        digitalWrite(outMinPin + bi, 1);
+                    } else {
+                        digitalWrite(outMinPin + bi, 0);
+                    }
+                    ++bi;
+                }
+            }
+        }
+    }
 
     function prepareTCS230(s2Value, s3Value) {
         digitalWrite(pins[2], s2Value);
@@ -98,7 +145,9 @@
     }
 
     function getPulse(nextID, pin) {
-        getPackage(nextID, 37, pin, short2array(20000));
+        var deviceId = 37;
+        var timeout = 20000;
+        getPackage(nextID, deviceId, pin, short2array(timeout));
     }
 
     function runPackage(){

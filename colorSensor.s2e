@@ -1,9 +1,9 @@
 {
-	"extensionName": "TCS230",
-	"description": "TCS230 Color Sensor",
+	"extensionName": "TCS230 Color Sensor",
+	"description": "TCS230 Color Sensor. Both Scratch and Arduino mode.",
 	"version": "1.0",
-	"author": "Gazihan ALANKUŞ (gazialankus@gmail.com)",
-	"homepage": "www.ieu.edu.tr",
+	"author": "Gazihan Alankuş (gazialankus@gmail.com)",
+	"homepage": "https://github.com/gazialankus/mBlockExtension-TCS230ColorSensor",
 	"sort": 0,
 	"javascriptURL": "js/colorSensor.js",
 	"firmware": "1.0",
@@ -29,19 +29,33 @@
 			}
 		],
 		[
-			"r",
-			"read color with filter %d.colorFilter",
-			"readColorWithFilter", 
+			"w",
+			"set color filter to %d.colorFilter",
+			"setColorFilter", 
 			"RED", 
 			{
 				"encode":"{d0}",
 				"inc": "",
-				"def": "--separator--unsigned long readPulseTCS230(int s2, int s3) {\ndigitalWrite(TCS230_S2,s2);\ndigitalWrite(TCS230_S3,s3);\nreturn pulseIn(TCS230_OUT, digitalRead(TCS230_OUT) == HIGH ? LOW : HIGH);\n}\nunsigned long readRedTCS230() {\nreturn readPulseTCS230(LOW, LOW);\n}\nunsigned long readGreenTCS230() {\nreturn readPulseTCS230(HIGH, HIGH);\n}\nunsigned long readBlueTCS230() {\nreturn readPulseTCS230(LOW, HIGH);\n}\nunsigned long readClearTCS230() {\nreturn readPulseTCS230(HIGH, LOW);\n}\nunsigned long readColorWithFilter(int filter) {\nreturn filter == 1 ? readRedTCS230() : (filter == 2 ? readGreenTCS230() : (filter == 3) ? readBlueTCS230() : readClearTCS230());\n}\n",
+				"def": "--separator--void prepareTCS230(int s2, int s3) {\ndigitalWrite(TCS230_S2,s2);\ndigitalWrite(TCS230_S3,s3);\n}\nvoid prepareToReadRedTCS230() {\nprepareTCS230(LOW, LOW);\n}\nvoid prepareToReadGreenTCS230() {\nprepareTCS230(HIGH, HIGH);\n}\nvoid prepareToReadBlueTCS230() {\nreturn prepareTCS230(LOW, HIGH);\n}\nvoid prepareToReadClearTCS230() {\nprepareTCS230(HIGH, LOW);\n}\nvoid setColorWithFilter(int filter) {\nreturn filter == 1 ? prepareToReadRedTCS230() : (filter == 2 ? prepareToReadGreenTCS230() : (filter == 3) ? prepareToReadBlueTCS230() : prepareToReadClearTCS230());\n}\n",
 				"setup": "",
-				"work": "readColorWithFilter({0})", 
+				"work": "setColorWithFilter({0});", 
 				"loop": ""
 			}
-		]
+		], 
+		[
+			"r",
+			"read color with current filter",
+			"readColorWithCurrentFilter", 
+			{
+				"encode":"{d0}",
+				"inc": "",
+				"def": "",
+				"setup": "",
+				"work": "pulseIn(TCS230_OUT, digitalRead(TCS230_OUT) == HIGH ? LOW : HIGH)", 
+				"loop": ""
+			}
+		] 
+
 	],
 	"menus": {
 		"freqScaling": ["POWEROFF", "2%", "20%", "100%"], 
