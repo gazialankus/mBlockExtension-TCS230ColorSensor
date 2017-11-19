@@ -2,6 +2,7 @@
 
 (function(ext) {
     var device = null;
+    var _rxBuf = [];
     
 	var levels = {
 		HIGH:1,
@@ -27,19 +28,23 @@
 	ext.resetAll = function(){};
 	
 	ext.runArduino = function(){
-		
+        responseValue();
 	};
 	ext.initializeTCS230 = function(s0, s1, s2, s3, out, freqScalingString) {
+        trace([99]);
         pins = [s0, s1, s2, s3, out];
         var freqScaling = valueOrIndex(freqScalingString, freqScales);
         digitalWrite(s0, (freqScaling == 0 || freqScaling == 2) ? 0 : 1);
         digitalWrite(s1, (freqScaling == 0 || freqScaling == 20) ? 0 : 1);
     };
     ext.readColorWithFilter = function(nextId, colorFilterString) { 
-        var filter = valueOrIndex(colorFilterString, colorFilters);
-        filter == 1 ? prepareToReadRedTCS230() : (filter == 2 ? prepareToReadGreenTCS230() : (filter == 3) ? prepareToReadBlueTCS230() : prepareToReadClearTCS230());
+        var deviceId = 30;
+        getPackage(nextID,deviceId,5);
 
-        getPulse(nextID, pins[4]);
+        // var filter = valueOrIndex(colorFilterString, colorFilters);
+        // filter == 1 ? prepareToReadRedTCS230() : (filter == 2 ? prepareToReadGreenTCS230() : (filter == 3) ? prepareToReadBlueTCS230() : prepareToReadClearTCS230());
+
+        // getPulse(nextID, pins[4]);
     };
 	var _level = 0;
 	ext.blink = function(){
@@ -99,10 +104,108 @@
     function runPackage(){
         sendPackage(arguments, 2);
     }
-
-    function processData(bytes) {
-        trace(bytes);
+    function getPackage(){
+        var nextID = arguments[0];
+        Array.prototype.shift.call(arguments);
+        sendPackage(arguments, 1);
     }
+
+
+    var _isParseStart = false;
+    var _isParseStartIndex = 0;
+    function processData(bytes) {
+        var len = bytes.length;
+        if(_rxBuf.length>30){
+            _rxBuf = [];
+        }
+        for(var index=0;index<bytes.length;index++){
+            var c = bytes[index];
+            _rxBuf.push(c);
+            if(_rxBuf.length>=2){
+                if(_rxBuf[_rxBuf.length-1]==0x55 && _rxBuf[_rxBuf.length-2]==0xff){
+                    _isParseStart = true;
+                    _isParseStartIndex = _rxBuf.length-2;
+                }
+                if(_rxBuf[_rxBuf.length-1]==0xa && _rxBuf[_rxBuf.length-2]==0xd&&_isParseStart){
+                    _isParseStart = false;
+                    
+                    var position = _isParseStartIndex+2;
+                    var extId = _rxBuf[position];
+                    position++;
+                    var type = _rxBuf[position];
+                    position++;
+                    //1 byte 2 float 3 short 4 len+string 5 double
+                    var value;
+                    switch(type){
+                        case 1:{
+                            value = _rxBuf[position];
+                            position++;
+                        }
+                            break;
+                        case 2:{
+                            value = readFloat(_rxBuf,position);
+                            position+=4;
+                            if(value<-255||value>1023){
+                                value = 0;
+                            }
+                        }
+                            break;
+                        case 3:{
+                            value = readInt(_rxBuf,position,2);
+                            position+=2;
+                        }
+                            break;
+                        case 4:{
+                            var l = _rxBuf[position];
+                            position++;
+                            value = readString(_rxBuf,position,l);
+                        }
+                            break;
+                        case 5:{
+                            value = readDouble(_rxBuf,position);
+                            position+=4;
+                        }
+                            break;
+                        case 6:
+                            value = readInt(_rxBuf,position,4);
+                            position+=4;
+                            break;
+                    }
+                    if(type<=6){
+                        responseValue(extId,value);
+                    }else{
+                        responseValue();
+                    }
+                    _rxBuf = [];
+                }
+            } 
+        }
+    }
+    function readFloat(arr,position){
+        var f= [arr[position],arr[position+1],arr[position+2],arr[position+3]];
+        return parseFloat(f);
+    }
+    function readInt(arr,position,count){
+        var result = 0;
+        for(var i=0; i<count; ++i){
+            result |= arr[position+i] << (i << 3);
+        }
+        return result;
+    }
+    function readDouble(arr,position){
+        return readFloat(arr,position);
+    }
+    function readString(arr,position,len){
+        var value = "";
+        for(var ii=0;ii<len;ii++){
+            value += String.fromCharCode(_rxBuf[ii+position]);
+        }
+        return value;
+    }
+
+
+
+
 
     // Extension API interactions
     var potentialDevices = [];
